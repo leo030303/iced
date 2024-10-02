@@ -1,12 +1,11 @@
 use iced::event::{self, Event};
+use iced::widget::scrollable::Scrollbar;
 use iced::widget::{
     button, center, checkbox, container, list, scrollable, text, Column,
     Scrollable,
 };
 use iced::window;
-use iced::{
-    Alignment, Center, Element, Fill, Font, Length, Subscription, Task,
-};
+use iced::{Center, Element, Fill, Font, Length, Subscription, Task};
 
 pub fn main() -> iced::Result {
     iced::application("Events - Iced", Events::update, Events::view)
@@ -73,10 +72,7 @@ impl Events {
                     .spacing(10),
                 )
                 .padding(10),
-                scrollable::Direction::Vertical(
-                    scrollable::Properties::default()
-                        .alignment(scrollable::Alignment::End),
-                ),
+                scrollable::Direction::Vertical(Scrollbar::new()),
             )
             .height(Length::Fill),
         )

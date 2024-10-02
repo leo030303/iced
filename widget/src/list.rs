@@ -4,7 +4,6 @@ use crate::core::layout;
 use crate::core::mouse;
 use crate::core::overlay;
 use crate::core::renderer;
-use crate::core::widget;
 use crate::core::widget::tree::{self, Tree};
 use crate::core::window;
 use crate::core::{
@@ -384,7 +383,7 @@ where
             })
             .fold(event::Status::Ignored, event::Status::merge);
 
-        if let Event::Window(_, window::Event::RedrawRequested(_)) = event {
+        if let Event::Window(window::Event::RedrawRequested(_)) = event {
             match &mut state.task {
                 Task::Idle => {}
                 Task::Computing { .. } => {
@@ -584,7 +583,7 @@ where
         tree: &mut Tree,
         layout: Layout<'_>,
         renderer: &Renderer,
-        operation: &mut dyn widget::Operation<Message>,
+        operation: &mut dyn core::widget::Operation,
     ) {
         let state = tree.state.downcast_mut::<State>();
         let offset = layout.position() - Point::ORIGIN;

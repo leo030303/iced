@@ -5,7 +5,7 @@ use iced::widget::{
 use iced::{Alignment, Element, Length, Theme};
 
 pub fn main() -> iced::Result {
-    iced::program("List - Iced", List::update, List::view)
+    iced::application("List - Iced", List::update, List::view)
         .theme(|_| Theme::TokyoNight)
         .run()
 }
@@ -63,7 +63,7 @@ impl List {
                     ]
                     .spacing(10)
                     .padding(5)
-                    .align_items(Alignment::Center)
+                    .align_y(Alignment::Center)
                     .into()
                 }))
                 .padding(10),
