@@ -678,11 +678,15 @@ impl<T> Content<T> {
     }
 
     pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
-        self.changes.borrow_mut().push_back(Change::Updated {
-            original: index,
-            current: index,
-        });
-        self.items.get_mut(index)
+        if self.items.len() > index {
+            self.changes.borrow_mut().push_back(Change::Updated {
+                original: index,
+                current: index,
+            });
+            self.items.get_mut(index)
+        } else {
+            None
+        }
     }
 
     pub fn push(&mut self, item: T) {
