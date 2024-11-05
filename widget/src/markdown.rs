@@ -54,7 +54,10 @@ use crate::core::theme;
 use crate::core::{
     self, color, Color, Element, Length, Padding, Pixels, Theme,
 };
-use crate::{column, container, rich_text, row, scrollable, span, text, Image};
+use crate::{
+    column, container, horizontal_rule, rich_text, row, scrollable, span, text,
+    Image, Space,
+};
 
 use std::cell::{Cell, RefCell};
 use std::sync::Arc;
@@ -87,6 +90,10 @@ pub enum Item {
         /// The items of the list.
         items: Vec<Vec<Item>>,
     },
+    /// A block quote
+    BlockQuote(Text),
+    /// A horizontal rule
+    Rule,
 }
 
 /// A bunch of parsed Markdown text.
@@ -387,6 +394,12 @@ pub fn parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
                 link = None;
                 None
             }
+            pulldown_cmark::TagEnd::BlockQuote if !metadata && !table => {
+                produce(
+                    &mut lists,
+                    Item::BlockQuote(Text::new(spans.drain(..).collect())),
+                )
+            }
             pulldown_cmark::TagEnd::Paragraph if !metadata && !table => {
                 produce(
                     &mut lists,
@@ -511,6 +524,34 @@ pub fn parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
             });
             None
         }
+        pulldown_cmark::Event::Rule if !metadata && !table => {
+            produce(&mut lists, Item::Rule)
+        }
+        pulldown_cmark::Event::TaskListMarker(is_checked)
+            if !metadata && !table =>
+        {
+            if is_checked {
+                spans.push(Span::Standard {
+                    text: String::from("⮽"),
+                    strikethrough,
+                    strong,
+                    emphasis,
+                    link: link.clone(),
+                    code: false,
+                });
+            } else {
+                spans.push(Span::Standard {
+                    text: String::from("☐"),
+                    strikethrough,
+                    strong,
+                    emphasis,
+                    link: link.clone(),
+                    code: false,
+                });
+            }
+            None
+        }
+
         _ => None,
     })
 }
@@ -644,7 +685,7 @@ pub fn view<'a, 'b, Theme, Renderer>(
     style: Style,
 ) -> Element<'a, Url, Theme, Renderer>
 where
-    Theme: Catalog + 'a,
+    Theme: Catalog + 'a + crate::rule::Catalog,
     Renderer: core::text::Renderer<Font = Font> + 'a + core::image::Renderer,
     <Renderer as core::image::Renderer>::Handle:
         std::convert::From<core::image::Handle>,
@@ -726,6 +767,12 @@ where
         Item::Image { image_path } => {
             Image::new(Handle::from_path(image_path)).into()
         }
+        Item::BlockQuote(block_quote) => row![
+            container(Space::with_width(Length::Fixed(40.0))),
+            rich_text(block_quote.spans(style)).size(text_size)
+        ]
+        .into(),
+        Item::Rule => horizontal_rule(2).into(),
     });
 
     Element::new(column(blocks).width(Length::Fill).spacing(text_size))
