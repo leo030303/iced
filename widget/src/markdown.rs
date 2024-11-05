@@ -54,12 +54,13 @@ use crate::core::theme;
 use crate::core::{
     self, color, Color, Element, Length, Padding, Pixels, Theme,
 };
-use crate::{column, container, rich_text, row, scrollable, span, text};
+use crate::{column, container, rich_text, row, scrollable, span, text, Image};
 
 use std::cell::{Cell, RefCell};
 use std::sync::Arc;
 
 pub use core::text::Highlight;
+use iced_runtime::core::image::Handle;
 pub use pulldown_cmark::HeadingLevel;
 pub use url::Url;
 
@@ -74,6 +75,11 @@ pub enum Item {
     ///
     /// You can enable the `highlighter` feature for syntax highlighting.
     CodeBlock(Text),
+    /// An image.
+    Image {
+        /// The path to the image file
+        image_path: String,
+    },
     /// A list.
     List {
         /// The first number of the list, if it is ordered.
@@ -244,6 +250,7 @@ pub fn parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
     let mut metadata = false;
     let mut table = false;
     let mut link = None;
+    let mut image_path = None;
     let mut lists = Vec::new();
 
     #[cfg(feature = "highlighter")]
@@ -301,6 +308,16 @@ pub fn parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
                     }
                     _ => {}
                 }
+
+                None
+            }
+            pulldown_cmark::Tag::Image {
+                link_type: _,
+                dest_url,
+                title: _,
+                id: _,
+            } if !metadata && !table => {
+                image_path = Some(dest_url.to_string());
 
                 None
             }
@@ -407,6 +424,14 @@ pub fn parse(markdown: &str) -> impl Iterator<Item = Item> + '_ {
                     &mut lists,
                     Item::CodeBlock(Text::new(spans.drain(..).collect())),
                 )
+            }
+            pulldown_cmark::TagEnd::Image if !metadata && !table => {
+                let image_path_string = image_path.take();
+                if let Some(image_path) = image_path_string {
+                    produce(&mut lists, Item::Image { image_path })
+                } else {
+                    None
+                }
             }
             pulldown_cmark::TagEnd::MetadataBlock(_) => {
                 metadata = false;
@@ -620,7 +645,9 @@ pub fn view<'a, 'b, Theme, Renderer>(
 ) -> Element<'a, Url, Theme, Renderer>
 where
     Theme: Catalog + 'a,
-    Renderer: core::text::Renderer<Font = Font> + 'a,
+    Renderer: core::text::Renderer<Font = Font> + 'a + core::image::Renderer,
+    <Renderer as core::image::Renderer>::Handle:
+        std::convert::From<core::image::Handle>,
 {
     let Settings {
         text_size,
@@ -696,6 +723,9 @@ where
         .padding(spacing.0 / 2.0)
         .class(Theme::code_block())
         .into(),
+        Item::Image { image_path } => {
+            Image::new(Handle::from_path(image_path)).into()
+        }
     });
 
     Element::new(column(blocks).width(Length::Fill).spacing(text_size))
