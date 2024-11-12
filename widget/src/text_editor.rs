@@ -114,7 +114,7 @@ pub struct TextEditor<
     wrapping: Wrapping,
     class: Theme::Class<'a>,
     key_binding: Option<Box<dyn Fn(KeyPress) -> Option<Binding<Message>> + 'a>>,
-    on_edit: Option<Box<dyn Fn((Action, f32)) -> Message + 'a>>,
+    on_edit: Option<Box<dyn Fn(Action) -> Message + 'a>>,
     highlighter_settings: Highlighter::Settings,
     highlighter_format: fn(
         &Highlighter::Highlight,
@@ -185,7 +185,7 @@ where
     /// If this method is not called, the [`TextEditor`] will be disabled.
     pub fn on_action(
         mut self,
-        on_edit: impl Fn((Action, f32)) -> Message + 'a,
+        on_edit: impl Fn(Action) -> Message + 'a,
     ) -> Self {
         self.on_edit = Some(Box::new(on_edit));
         self
@@ -673,13 +673,10 @@ where
                 state.last_click = Some(click);
                 state.drag_click = Some(click.kind());
 
-                shell.publish(on_edit((action, state.partial_scroll)));
+                shell.publish(on_edit(action));
             }
             Update::Drag(position) => {
-                shell.publish(on_edit((
-                    Action::Drag(position),
-                    state.partial_scroll,
-                )));
+                shell.publish(on_edit(Action::Drag(position)));
             }
             Update::Release => {
                 state.drag_click = None;
@@ -694,12 +691,9 @@ where
                 let lines = lines + state.partial_scroll;
                 state.partial_scroll = lines.fract();
 
-                shell.publish(on_edit((
-                    Action::Scroll {
-                        lines: lines as i32,
-                    },
-                    state.partial_scroll,
-                )));
+                shell.publish(on_edit(Action::Scroll {
+                    lines: lines as i32,
+                }));
             }
             Update::Binding(binding) => {
                 fn apply_binding<
@@ -710,13 +704,11 @@ where
                     binding: Binding<Message>,
                     content: &Content<R>,
                     state: &mut State<H>,
-                    on_edit: &dyn Fn((Action, f32)) -> Message,
+                    on_edit: &dyn Fn(Action) -> Message,
                     clipboard: &mut dyn Clipboard,
                     shell: &mut Shell<'_, Message>,
                 ) {
-                    let mut publish = |action| {
-                        shell.publish(on_edit((action, state.partial_scroll)));
-                    };
+                    let mut publish = |action| shell.publish(on_edit(action));
 
                     match binding {
                         Binding::Unfocus => {
