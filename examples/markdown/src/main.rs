@@ -16,7 +16,7 @@ struct Markdown {
 
 #[derive(Debug, Clone)]
 enum Message {
-    Edit(text_editor::Action),
+    Edit((text_editor::Action, f32)),
     LinkClicked(markdown::Url),
 }
 
@@ -38,7 +38,7 @@ impl Markdown {
 
     fn update(&mut self, message: Message) {
         match message {
-            Message::Edit(action) => {
+            Message::Edit((action, _)) => {
                 let is_edit = action.is_edit();
 
                 self.content.perform(action);
